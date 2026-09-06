@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MultiBoot 设置</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">托盘命令启动器</p>
+          <h1>MultiBoot</h1>
+          <p class="subtitle">当前配置中的命令会动态显示在系统托盘菜单中。</p>
+        </div>
+        <span class="phase">Phase 6</span>
+      </header>
+
+      <aside id="startup-warnings" class="warning-panel" aria-live="polite" hidden></aside>
+
+      <section class="panel" aria-labelledby="entries-title">
+        <div class="panel-heading">
+          <div>
+            <h2 id="entries-title">命令条目</h2>
+            <p id="entry-summary" class="muted">正在读取本地配置…</p>
+          </div>
+          <div class="toolbar">
+            <button id="refresh-button" type="button">刷新</button>
+            <button id="add-button" class="primary" type="button">新增条目</button>
+          </div>
+        </div>
+        <div id="entries" class="entries" aria-live="polite"></div>
+      </section>
+
+      <section id="editor-panel" class="panel" aria-labelledby="editor-title" hidden>
+        <div class="panel-heading">
+          <h2 id="editor-title">新增条目</h2>
+          <button id="cancel-button" type="button">取消</button>
+        </div>
+        <form id="entry-form" class="entry-form">
+          <input id="entry-id" type="hidden" />
+          <label>
+            <span>Title</span>
+            <input id="entry-title" maxlength="120" required autocomplete="off" />
+          </label>
+          <label>
+            <span>Command</span>
+            <textarea id="entry-command" rows="6" required spellcheck="false"></textarea>
+          </label>
+          <div class="icon-field">
+            <span class="field-label">Icon</span>
+            <div class="icon-controls">
+              <div id="icon-preview" class="icon-preview" aria-label="图标预览">无</div>
+              <div>
+                <input id="entry-icon" type="file" accept="image/png,image/jpeg,image/webp,image/x-icon,.ico" />
+                <p class="muted">支持 PNG、JPEG、WEBP、ICO；保存时自动缩放并转为 PNG Base64。</p>
+                <button id="remove-icon-button" type="button">删除图标</button>
+              </div>
+            </div>
+          </div>
+          <label class="toggle-row">
+            <input id="entry-enabled" type="checkbox" checked />
+            <span>在托盘菜单中启用</span>
+          </label>
+          <div class="form-actions">
+            <span id="form-error" class="form-error" role="alert"></span>
+            <button class="primary" type="submit">保存并刷新托盘</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="general-title">
+        <div class="panel-heading compact">
+          <div>
+            <h2 id="general-title">常规设置</h2>
+            <p id="autostart-hint" class="muted">正在读取系统实际状态…</p>
+          </div>
+          <label class="switch-row">
+            <span>登录后自动启动</span>
+            <input id="autostart-toggle" type="checkbox" disabled />
+          </label>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="transfer-title">
+        <div class="panel-heading compact">
+          <div>
+            <h2 id="transfer-title">导入与导出</h2>
+            <p id="transfer-status" class="muted">图标会以内嵌 Base64 随同单个 JSON 文件保存。</p>
+          </div>
+          <div class="transfer-actions">
+            <select id="import-mode" aria-label="导入模式">
+              <option value="append">追加导入</option>
+              <option value="replace">覆盖现有条目</option>
+            </select>
+            <button id="import-button" type="button">导入 JSON</button>
+            <button id="export-button" class="primary" type="button">导出 JSON</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="result-title">
+        <div class="panel-heading">
+          <div>
+            <h2 id="result-title">最近执行结果</h2>
+            <p class="muted">失败的托盘命令会自动打开此窗口。</p>
+          </div>
+          <span id="result-badge" class="status neutral">尚未执行</span>
+        </div>
+        <dl id="result" class="result-grid" hidden>
+          <div><dt>退出码</dt><dd id="exit-code">—</dd></div>
+          <div class="output"><dt>标准输出</dt><dd><pre id="stdout"></pre></dd></div>
+          <div class="output"><dt>错误输出</dt><dd><pre id="stderr"></pre></dd></div>
+        </dl>
+      </section>
+
+      <footer>
+        <span>配置文件</span>
+        <code id="config-path">读取中…</code>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,95 @@
+name: Build desktop packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Universal 2
+            os: macos-latest
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            tauri_args: --target universal-apple-darwin --bundles app
+            artifact_name: MultiBoot-macOS-universal
+            artifact_path: dist-artifacts/MultiBoot-macOS-universal.zip
+          - name: Windows x64
+            os: windows-latest
+            rust_targets: x86_64-pc-windows-msvc
+            tauri_args: --target x86_64-pc-windows-msvc --bundles nsis,msi
+            artifact_name: MultiBoot-Windows-x64
+            artifact_path: dist-artifacts/MultiBoot-Windows-x64.zip
+          - name: Linux x64
+            os: ubuntu-22.04
+            rust_targets: x86_64-unknown-linux-gnu
+            tauri_args: --target x86_64-unknown-linux-gnu --bundles appimage,deb
+            artifact_name: MultiBoot-Linux-x64
+            artifact_path: dist-artifacts/MultiBoot-Linux-x64.tar.gz
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install Linux bundle dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
+      - run: npm ci
+      - run: npm run tauri build -- ${{ matrix.tauri_args }}
+
+      - name: Package macOS artifact
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist-artifacts
+          ditto -c -k --sequesterRsrc --keepParent \
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/MultiBoot.app \
+            dist-artifacts/MultiBoot-macOS-universal.zip
+
+      - name: Package Windows artifacts
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist-artifacts
+          $packages = @(
+            Get-ChildItem src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+            Get-ChildItem src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+          )
+          Compress-Archive -Path $packages.FullName -DestinationPath dist-artifacts/MultiBoot-Windows-x64.zip
+
+      - name: Package Linux artifacts
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist-artifacts
+          tar -C src-tauri/target/x86_64-unknown-linux-gnu/release/bundle \
+            -czf "$GITHUB_WORKSPACE/dist-artifacts/MultiBoot-Linux-x64.tar.gz" \
+            appimage deb
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
