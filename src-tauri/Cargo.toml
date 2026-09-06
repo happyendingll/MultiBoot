@@ -1,6 +1,6 @@
 [package]
 name = "multiboot"
-version = "0.1.0"
+version = "1.1.0"
 description = "A configurable cross-platform tray command launcher"
 authors = ["MultiBoot contributors"]
 edition = "2024"
