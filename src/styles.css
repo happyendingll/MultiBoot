@@ -23,8 +23,7 @@ h3 { margin: 0 0 8px; font-size: 15px; }
 p { margin: 0; }
 .subtitle, .muted { color: #687080; }
 .subtitle { margin-top: 8px; }
-.phase, .status { border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.phase { color: #4757c7; background: #e2e6ff; }
+.status { border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .panel { margin-bottom: 18px; padding: 22px; border: 1px solid #dce1e9; border-radius: 16px; background: #fff; box-shadow: 0 12px 32px rgb(44 54 80 / 8%); }
 .warning-panel { margin-bottom: 18px; padding: 14px 16px; color: #815d12; border: 1px solid #ebcf8f; border-radius: 12px; background: #fff8df; font-size: 13px; }
 .warning-panel p + p { margin-top: 7px; }

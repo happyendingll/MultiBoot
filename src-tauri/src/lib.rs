@@ -6,7 +6,7 @@ mod icon;
 mod import_export;
 mod tray;
 
-use std::sync::RwLock;
+use std::{collections::HashMap, sync::RwLock};
 
 use command::CommandResult;
 use config::{AppConfig, CommandItem, ConfigSnapshot};
@@ -15,6 +15,7 @@ use uuid::Uuid;
 
 struct AppState {
     config: RwLock<AppConfig>,
+    tray_results: RwLock<HashMap<Uuid, bool>>,
     config_path: std::path::PathBuf,
     startup_warnings: Vec<String>,
 }
@@ -283,6 +284,7 @@ pub fn run() {
             }
             app.manage(AppState {
                 config: RwLock::new(config),
+                tray_results: RwLock::new(HashMap::new()),
                 config_path,
                 startup_warnings,
             });
@@ -347,6 +349,10 @@ fn run_entry_from_tray(app: tauri::AppHandle, id: &str) {
             );
         }
         let _ = app.emit("command-finished", &result);
+
+        if let Err(error) = tray::show_execution_result(&app, entry.id, result.success) {
+            log::error!("更新托盘执行状态失败：{error}");
+        }
 
         if !result.success
             && let Some(window) = app.get_webview_window("main")
