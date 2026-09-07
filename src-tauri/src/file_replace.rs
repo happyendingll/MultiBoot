@@ -1,4 +1,4 @@
-use std::{fs, io, path::Path};
+use std::{io, path::Path};
 
 /// Replaces `destination` with `source`, including when the destination already
 /// exists. `std::fs::rename` has that behavior on Unix, while Windows requires
@@ -11,7 +11,7 @@ pub fn replace(source: &Path, destination: &Path) -> io::Result<()> {
 
     #[cfg(not(windows))]
     {
-        fs::rename(source, destination)
+        std::fs::rename(source, destination)
     }
 }
 
@@ -55,6 +55,7 @@ fn replace_windows(source: &Path, destination: &Path) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[test]
     fn replaces_an_existing_file() {
