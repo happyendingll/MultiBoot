@@ -122,11 +122,18 @@ mod tests {
     fn parsing_never_executes_imported_command() {
         let marker = std::env::temp_dir().join(format!("multiboot-import-{}", Uuid::new_v4()));
         let id = Uuid::new_v4();
-        let json = format!(
-            r#"{{"format":"tray-command-launcher","version":1,"items":[{{"id":"{id}","title":"安全测试","command":"touch {}","enabled":true,"order":0}}]}}"#,
-            marker.display()
-        );
-        let parsed = parse(&json).unwrap();
+        let json = serde_json::json!({
+            "format": "tray-command-launcher",
+            "version": 1,
+            "items": [{
+                "id": id,
+                "title": "安全测试",
+                "command": format!("touch {}", marker.display()),
+                "enabled": true,
+                "order": 0
+            }]
+        });
+        let parsed = parse(&json.to_string()).unwrap();
         assert_eq!(parsed.len(), 1);
         assert!(!marker.exists());
     }
