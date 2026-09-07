@@ -31,6 +31,10 @@ pub fn execute_command(command: &str) -> CommandResult {
 
 #[cfg(target_os = "windows")]
 fn platform_command(command: &str) -> Command {
+    use std::os::windows::process::CommandExt;
+
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
     let mut process = Command::new("powershell.exe");
     let script = format!(
         "[Console]::OutputEncoding = [Text.UTF8Encoding]::new(); [Console]::InputEncoding = [Text.UTF8Encoding]::new(); {command}"
@@ -42,6 +46,7 @@ fn platform_command(command: &str) -> Command {
         "-Command",
         &script,
     ]);
+    process.creation_flags(CREATE_NO_WINDOW);
     process
 }
 

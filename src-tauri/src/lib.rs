@@ -6,16 +6,16 @@ mod icon;
 mod import_export;
 mod tray;
 
-use std::{collections::HashMap, sync::RwLock};
+use std::sync::RwLock;
 
 use command::CommandResult;
 use config::{AppConfig, CommandItem, ConfigSnapshot};
 use tauri::{Emitter, Manager};
+use tauri_plugin_notification::NotificationExt;
 use uuid::Uuid;
 
 struct AppState {
     config: RwLock<AppConfig>,
-    tray_results: RwLock<HashMap<Uuid, bool>>,
     config_path: std::path::PathBuf,
     startup_warnings: Vec<String>,
 }
@@ -270,6 +270,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -284,7 +285,6 @@ pub fn run() {
             }
             app.manage(AppState {
                 config: RwLock::new(config),
-                tray_results: RwLock::new(HashMap::new()),
                 config_path,
                 startup_warnings,
             });
@@ -350,15 +350,19 @@ fn run_entry_from_tray(app: tauri::AppHandle, id: &str) {
         }
         let _ = app.emit("command-finished", &result);
 
-        if let Err(error) = tray::show_execution_result(&app, entry.id, result.success) {
-            log::error!("更新托盘执行状态失败：{error}");
-        }
-
-        if !result.success
-            && let Some(window) = app.get_webview_window("main")
+        let notification_title = if result.success {
+            "命令执行成功"
+        } else {
+            "命令执行失败"
+        };
+        if let Err(error) = app
+            .notification()
+            .builder()
+            .title(notification_title)
+            .body(&entry.title)
+            .show()
         {
-            let _ = window.show();
-            let _ = window.set_focus();
+            log::error!("发送命令执行结果通知失败：{error}");
         }
     });
 }

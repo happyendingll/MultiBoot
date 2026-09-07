@@ -1,11 +1,9 @@
+use crate::{AppState, icon, run_entry_from_tray};
 use tauri::{
     Manager,
     menu::{IconMenuItemBuilder, Menu, MenuItemBuilder, PredefinedMenuItem},
     tray::TrayIconBuilder,
 };
-use uuid::Uuid;
-
-use crate::{AppState, icon, run_entry_from_tray};
 
 const ENTRY_PREFIX: &str = "entry:";
 const SETTINGS_ID: &str = "settings";
@@ -39,22 +37,6 @@ pub fn create(app: &mut tauri::App) -> tauri::Result<()> {
 }
 
 pub fn refresh_tray_menu(app: &tauri::AppHandle) -> tauri::Result<()> {
-    let state = app.state::<AppState>();
-    state
-        .tray_results
-        .write()
-        .map_err(|_| tauri::Error::Anyhow(anyhow::anyhow!("托盘执行状态锁已损坏")))?
-        .clear();
-    replace_menu(app)
-}
-
-pub fn show_execution_result(app: &tauri::AppHandle, id: Uuid, success: bool) -> tauri::Result<()> {
-    let state = app.state::<AppState>();
-    state
-        .tray_results
-        .write()
-        .map_err(|_| tauri::Error::Anyhow(anyhow::anyhow!("托盘执行状态锁已损坏")))?
-        .insert(id, success);
     replace_menu(app)
 }
 
@@ -73,11 +55,6 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         .config
         .read()
         .map_err(|_| tauri::Error::Anyhow(anyhow::anyhow!("配置状态锁已损坏")))?;
-    let tray_results = state
-        .tray_results
-        .read()
-        .map_err(|_| tauri::Error::Anyhow(anyhow::anyhow!("托盘执行状态锁已损坏")))?;
-
     let mut items = config
         .items
         .iter()
@@ -86,8 +63,8 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     items.sort_by_key(|item| item.order);
 
     for item in &items {
-        let title = menu_item_title(&item.title, tray_results.get(&item.id).copied());
-        let mut builder = IconMenuItemBuilder::with_id(format!("{ENTRY_PREFIX}{}", item.id), title);
+        let mut builder =
+            IconMenuItemBuilder::with_id(format!("{ENTRY_PREFIX}{}", item.id), item.title.as_str());
         if let Some(data_url) = &item.icon {
             match icon::decode_menu_image(data_url) {
                 Ok(image) => builder = builder.icon(image),
@@ -106,30 +83,10 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     Ok(menu)
 }
 
-fn menu_item_title(title: &str, result: Option<bool>) -> String {
-    match result {
-        Some(true) => format!("{title} ✅"),
-        Some(false) => format!("{title} ❌"),
-        None => title.to_string(),
-    }
-}
-
 pub fn show_settings(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::menu_item_title;
-
-    #[test]
-    fn appends_colored_result_mark_after_title() {
-        assert_eq!(menu_item_title("成功命令", Some(true)), "成功命令 ✅");
-        assert_eq!(menu_item_title("失败命令", Some(false)), "失败命令 ❌");
-        assert_eq!(menu_item_title("未执行命令", None), "未执行命令");
     }
 }
