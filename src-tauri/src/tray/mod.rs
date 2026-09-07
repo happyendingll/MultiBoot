@@ -10,6 +10,21 @@ const SETTINGS_ID: &str = "settings";
 const QUIT_ID: &str = "quit";
 
 pub fn create(app: &mut tauri::App) -> tauri::Result<()> {
+    #[cfg(target_os = "linux")]
+    {
+        use gtk::prelude::ObjectExt;
+
+        // libdbusmenu filters GtkMenuItem images when gtk-menu-images is false.
+        // Muda uses GtkMenuItem + GtkImage rather than GtkImageMenuItem, so it
+        // cannot opt in through always-show-image. Override only this process's
+        // GTK setting before exporting the menu; do not change desktop settings.
+        if let Some(settings) = gtk::Settings::default() {
+            settings.set_property("gtk-menu-images", true);
+        } else {
+            log::warn!("无法获取 GTK 设置，Linux 托盘菜单图标可能被桌面设置隐藏");
+        }
+    }
+
     let menu = build_menu(app.handle())?;
     let icon = app
         .default_window_icon()

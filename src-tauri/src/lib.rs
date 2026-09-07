@@ -4,6 +4,8 @@ mod config;
 mod file_replace;
 mod icon;
 mod import_export;
+#[cfg(target_os = "linux")]
+mod linux_window;
 mod tray;
 
 use std::sync::RwLock;
@@ -292,6 +294,14 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            #[cfg(target_os = "linux")]
+            if window.label() == "main"
+                && matches!(event, tauri::WindowEvent::Focused(true))
+                && let Err(error) = linux_window::refresh_decorations(window)
+            {
+                log::warn!("刷新 Linux 设置窗口标题栏失败：{error}");
+            }
+
             if window.label() == "main"
                 && let tauri::WindowEvent::CloseRequested { api, .. } = event
             {
