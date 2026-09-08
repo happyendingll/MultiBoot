@@ -1,6 +1,9 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 
 interface CommandItem {
   id: string;
@@ -32,6 +35,8 @@ interface CommandResult {
 
 let currentConfig: AppConfig = { version: 1, settings: { autostart: true }, items: [] };
 let editorIcon: string | null = null;
+let availableUpdate: Update | null = null;
+let updateBusy = false;
 
 const requireElement = <T extends Element>(selector: string): T => {
   const element = document.querySelector<T>(selector);
@@ -139,6 +144,109 @@ const loadConfig = async (): Promise<void> => {
     const entries = requireElement<HTMLDivElement>("#entries");
     entries.textContent = `读取配置失败：${String(error)}`;
     entries.classList.add("error-message");
+  }
+};
+
+const loadAppVersion = async (): Promise<void> => {
+  const badge = requireElement<HTMLElement>("#app-version");
+  try {
+    badge.textContent = `v${await getVersion()}`;
+  } catch (error) {
+    console.error("读取应用版本失败", error);
+    badge.hidden = true;
+  }
+};
+
+const showUpdatePanel = (title: string, message: string, error = false): void => {
+  const panel = requireElement<HTMLElement>("#update-panel");
+  panel.hidden = false;
+  panel.classList.toggle("error", error);
+  requireElement<HTMLElement>("#update-title").textContent = title;
+  requireElement<HTMLElement>("#update-message").textContent = message;
+};
+
+const checkForUpdates = async (silent = false): Promise<void> => {
+  if (updateBusy) return;
+  updateBusy = true;
+  const button = requireElement<HTMLButtonElement>("#check-update-button");
+  const installButton = requireElement<HTMLButtonElement>("#install-update-button");
+  const dismissButton = requireElement<HTMLButtonElement>("#dismiss-update-button");
+  button.disabled = true;
+  button.textContent = "检查中…";
+  installButton.disabled = false;
+  installButton.hidden = true;
+  dismissButton.disabled = false;
+  requireElement<HTMLElement>("#update-progress").textContent = "";
+
+  try {
+    const update = await check({ timeout: 15_000 });
+    if (!update) {
+      if (availableUpdate) {
+        await availableUpdate.close();
+        availableUpdate = null;
+      }
+      if (!silent) showUpdatePanel("已是最新版本", "当前没有可用更新。");
+      return;
+    }
+    if (availableUpdate) await availableUpdate.close();
+    availableUpdate = update;
+    showUpdatePanel(
+      `发现新版本 v${update.version}`,
+      update.body?.trim() || `当前版本 v${update.currentVersion}，可更新到 v${update.version}。`,
+    );
+    installButton.hidden = false;
+    installButton.textContent = "下载并安装";
+  } catch (error) {
+    if (!silent) showUpdatePanel("检查更新失败", String(error), true);
+  } finally {
+    button.disabled = false;
+    button.textContent = "检查更新";
+    updateBusy = false;
+  }
+};
+
+const installAvailableUpdate = async (): Promise<void> => {
+  if (!availableUpdate || updateBusy) return;
+  updateBusy = true;
+  const installButton = requireElement<HTMLButtonElement>("#install-update-button");
+  const dismissButton = requireElement<HTMLButtonElement>("#dismiss-update-button");
+  const progress = requireElement<HTMLElement>("#update-progress");
+  installButton.disabled = true;
+  dismissButton.disabled = true;
+  installButton.textContent = "正在下载…";
+  let downloaded = 0;
+  let total: number | undefined;
+
+  try {
+    await availableUpdate.downloadAndInstall((event) => {
+      if (event.event === "Started") {
+        total = event.data.contentLength;
+        progress.textContent = total ? "0%" : "准备下载";
+      } else if (event.event === "Progress") {
+        downloaded += event.data.chunkLength;
+        progress.textContent = total
+          ? `${Math.min(100, Math.round((downloaded / total) * 100))}%`
+          : `${Math.round(downloaded / 1024)} KB`;
+      } else {
+        progress.textContent = "安装中…";
+        installButton.textContent = "正在安装…";
+      }
+    });
+    await relaunch();
+  } catch (error) {
+    showUpdatePanel("安装更新失败", String(error), true);
+    installButton.disabled = false;
+    dismissButton.disabled = false;
+    installButton.textContent = "重试下载";
+    updateBusy = false;
+  }
+};
+
+const dismissUpdate = async (): Promise<void> => {
+  requireElement<HTMLElement>("#update-panel").hidden = true;
+  if (availableUpdate) {
+    await availableUpdate.close();
+    availableUpdate = null;
   }
 };
 
@@ -309,6 +417,15 @@ const renderResult = (result: CommandResult): void => {
 };
 
 window.addEventListener("DOMContentLoaded", () => {
+  requireElement<HTMLButtonElement>("#check-update-button").addEventListener("click", () => {
+    void checkForUpdates();
+  });
+  requireElement<HTMLButtonElement>("#install-update-button").addEventListener("click", () => {
+    void installAvailableUpdate();
+  });
+  requireElement<HTMLButtonElement>("#dismiss-update-button").addEventListener("click", () => {
+    void dismissUpdate();
+  });
   requireElement<HTMLButtonElement>("#refresh-button").addEventListener("click", () => void loadConfig());
   requireElement<HTMLButtonElement>("#add-button").addEventListener("click", () => openEditor());
   requireElement<HTMLButtonElement>("#cancel-button").addEventListener("click", closeEditor);
@@ -338,6 +455,8 @@ window.addEventListener("DOMContentLoaded", () => {
     void saveEditor();
   });
   void listen<CommandResult>("command-finished", ({ payload }) => renderResult(payload));
+  void loadAppVersion();
+  void checkForUpdates(true);
   void loadConfig();
   void loadAutostart();
 });

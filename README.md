@@ -2,11 +2,11 @@
 
 基于 Tauri 2 的跨平台、配置驱动托盘命令启动器。
 
-## v1.3（1.3.0）
+## v1.3.1
 
-- 修复 Linux/Wayland 下设置窗口从托盘显示后标题栏按钮无响应的问题。
-- Linux 进程内显式启用 GTK 菜单图片，避免桌面默认设置导致命令图标被过滤；不修改全局桌面设置。
-- Windows/macOS 窗口和托盘行为保持不变。Ubuntu 24.04 菜单图片仍需实机验收。
+- 更新应用图标，并在设置页右上角显示当前版本。
+- 启动时静默检查更新，也可点击“检查更新”手动检查。
+- 发现新版本后可在应用内下载安装，并在完成后自动重启。
 
 ## 当前进度
 
@@ -39,10 +39,12 @@ npm run build:macos-universal
 
 产物位于 `src-tauri/target/universal-apple-darwin/release/bundle/macos/MultiBoot.app`。
 
-`.github/workflows/build-desktop.yml` 可手动触发，也会在推送 `v*` 标签时运行。它在对应的原生 GitHub runner 上生成：
+`.github/workflows/build-desktop.yml` 可手动触发，也会在推送 `v*` 标签时运行。标签构建会创建对应的 GitHub Release、生成更新清单与签名，并在原生 GitHub runner 上生成：
 
-- macOS Universal 2：包含 `arm64` 和 `x86_64` 的 `.app.zip`
+- macOS Universal 2：包含 `arm64` 和 `x86_64` 的 `.app` 更新包
 - Windows x64：NSIS `.exe` 与 MSI `.msi`
 - Linux x64：AppImage 与 Debian `.deb`
 
-未配置商业代码签名证书时，macOS 使用 ad-hoc 签名。对外发布仍建议配置 Apple Developer ID、公证及 Windows 代码签名。
+自动更新依赖仓库 Secrets `TAURI_SIGNING_PRIVATE_KEY` 和 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`。Windows 更新优先使用 NSIS，Linux 自动更新仅支持 AppImage；`.deb` 用户需手动升级。
+
+未配置商业代码签名证书时，macOS 使用 ad-hoc 签名。更新包本身仍由 Tauri 更新签名密钥验证；对外发布建议另外配置 Apple Developer ID、公证及 Windows 代码签名。

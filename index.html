@@ -16,7 +16,23 @@
           <h1>MultiBoot</h1>
           <p class="subtitle">当前配置中的命令会动态显示在系统托盘菜单中。</p>
         </div>
+        <div class="version-tools">
+          <span id="app-version" class="version-badge" aria-label="应用版本">v…</span>
+          <button id="check-update-button" class="version-action" type="button">检查更新</button>
+        </div>
       </header>
+
+      <aside id="update-panel" class="update-panel" aria-live="polite" hidden>
+        <div class="update-copy">
+          <strong id="update-title">正在检查更新…</strong>
+          <p id="update-message"></p>
+        </div>
+        <div class="update-actions">
+          <span id="update-progress" class="muted"></span>
+          <button id="dismiss-update-button" type="button">稍后</button>
+          <button id="install-update-button" class="primary" type="button" hidden>下载并安装</button>
+        </div>
+      </aside>
 
       <aside id="startup-warnings" class="warning-panel" aria-live="polite" hidden></aside>
 
@@ -105,7 +121,7 @@
         <div class="panel-heading">
           <div>
             <h2 id="result-title">最近执行结果</h2>
-            <p class="muted">失败的托盘命令会自动打开此窗口。</p>
+            <p class="muted">设置窗口打开时，可在这里查看最近一次托盘命令的输出。</p>
           </div>
           <span id="result-badge" class="status neutral">尚未执行</span>
         </div>
