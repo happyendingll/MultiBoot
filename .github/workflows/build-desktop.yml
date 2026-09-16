@@ -72,3 +72,21 @@ jobs:
           uploadWorkflowArtifacts: true
           workflowArtifactNamePattern: MultiBoot-[platform]-[arch]-[bundle]
           args: ${{ matrix.tauri_args }}
+
+      - name: Verify Linux AppImage compatibility code
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          bundle_dir="src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage"
+          mapfile -t appimages < <(find "$bundle_dir" -maxdepth 1 -type f -name '*.AppImage')
+          test "${#appimages[@]}" -eq 1
+
+          extract_dir="$(mktemp -d)"
+          appimage_path="$GITHUB_WORKSPACE/${appimages[0]}"
+          (
+            cd "$extract_dir"
+            "$appimage_path" --appimage-extract
+          )
+
+          test -x "$extract_dir/squashfs-root/usr/bin/multiboot"
+          strings "$extract_dir/squashfs-root/usr/bin/multiboot" | grep -Fq MULTIBOOT_APPIMAGE_SYSTEM_WEBKIT
