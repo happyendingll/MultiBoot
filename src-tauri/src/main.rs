@@ -4,11 +4,7 @@
 #[cfg(target_os = "linux")]
 fn relaunch_wayland_appimage_with_system_webkit() {
     use std::{
-        collections::HashSet,
-        env,
-        os::unix::process::CommandExt,
-        path::PathBuf,
-        process::Command,
+        collections::HashSet, env, os::unix::process::CommandExt, path::PathBuf, process::Command,
     };
 
     const RELAUNCHED: &str = "MULTIBOOT_APPIMAGE_SYSTEM_WEBKIT";
