@@ -261,7 +261,7 @@ fn import_config(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             log::info!("检测到重复启动，转到现有设置窗口");
             tray::show_settings(app);
@@ -280,12 +280,6 @@ pub fn run() {
             None,
         ))
         .setup(|app| {
-            #[cfg(target_os = "macos")]
-            {
-                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-                app.set_dock_visibility(false);
-            }
-
             log::info!("MultiBoot 启动");
             let (config, config_path, startup_warnings) = config::load_or_create(app.handle())?;
             if config.settings.autostart
@@ -329,8 +323,17 @@ pub fn run() {
             export_config,
             import_config
         ])
-        .run(tauri::generate_context!())
-        .expect("运行 MultiBoot 时发生致命错误");
+        .build(tauri::generate_context!())
+        .expect("构建 MultiBoot 时发生致命错误");
+
+    #[cfg(target_os = "macos")]
+    let app = {
+        let mut app = app;
+        app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+        app
+    };
+
+    app.run(|_, _| {});
 }
 
 fn run_entry_from_tray(app: tauri::AppHandle, id: &str) {
