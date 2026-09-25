@@ -38,6 +38,7 @@ npm run build:macos-universal
 ```
 
 产物位于 `src-tauri/target/universal-apple-darwin/release/bundle/macos/MultiBoot.app`。
+macOS 应用作为菜单栏常驻程序运行，不在程序坞显示图标；设置窗口可从托盘菜单打开。
 
 `.github/workflows/build-desktop.yml` 可手动触发，也会在推送 `v*` 标签时运行。标签构建会创建对应的 GitHub Release、生成更新清单与签名，并在原生 GitHub runner 上生成：
 

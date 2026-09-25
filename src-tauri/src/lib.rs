@@ -280,6 +280,12 @@ pub fn run() {
             None,
         ))
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            {
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                app.set_dock_visibility(false);
+            }
+
             log::info!("MultiBoot 启动");
             let (config, config_path, startup_warnings) = config::load_or_create(app.handle())?;
             if config.settings.autostart
